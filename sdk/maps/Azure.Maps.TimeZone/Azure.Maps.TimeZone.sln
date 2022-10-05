@@ -5,10 +5,6 @@ VisualStudioVersion = 16.0.29709.97
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Azure.Core.TestFramework", "..\..\core\Azure.Core.TestFramework\src\Azure.Core.TestFramework.csproj", "{ECC730C1-4AEA-420C-916A-66B19B79E4DC}"
 EndProject
-Project("{ED0BA503-5150-4ADD-8EC3-F381306EC1E7}") = "Azure.Maps.TimeZone.Perf", "perf\Azure.Maps.TimeZone.Perf.csproj", "{30C5FF85-655A-49FC-A324-16438130FF3F}"
-EndProject
-Project("{ED0BA503-5150-4ADD-8EC3-F381306EC1E7}") = "Azure.Maps.TimeZone.Stress", "stress\Azure.Maps.TimeZone.Stress.csproj", "{47E3BC66-5C4F-47CD-A37B-A973E54BCBA9}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Azure.Maps.TimeZone", "src\Azure.Maps.TimeZone.csproj", "{D8DAD88A-249F-4CF5-A16D-BB99DF0F3299}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Azure.Maps.TimeZone.Tests", "tests\Azure.Maps.TimeZone.Tests.csproj", "{3D79EA8F-C626-45BC-A7E7-8E8F1035A96B}"

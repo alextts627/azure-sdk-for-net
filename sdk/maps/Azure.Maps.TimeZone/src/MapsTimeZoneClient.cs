@@ -14,41 +14,97 @@ using Azure.Core.Pipeline;
 
 namespace Azure.Maps.TimeZone
 {
-    // Data plane generated client. The TimeZone service client.
     /// <summary> The TimeZone service client. </summary>
-    public partial class TimeZoneClient
+    public partial class MapsTimeZoneClient
     {
+        /// <summary> The HTTP pipeline for sending and receiving REST requests and responses. </summary>
         private readonly HttpPipeline _pipeline;
-        private readonly Uri _endpoint;
-        private readonly string _clientId;
-        private readonly string _apiVersion;
+
+        /// <summary> The restClient is used to access Render REST client. </summary>
+        internal TimezoneRestClient restClient { get; }
 
         /// <summary> The ClientDiagnostics is used to provide tracing support for the client library. </summary>
         internal ClientDiagnostics ClientDiagnostics { get; }
 
-        /// <summary> The HTTP pipeline for sending and receiving REST requests and responses. </summary>
-        public virtual HttpPipeline Pipeline => _pipeline;
-
-        /// <summary> Initializes a new instance of TimeZoneClient. </summary>
-        public TimeZoneClient() : this(new Uri("https://atlas.microsoft.com"), null, new TimeZoneClientOptions())
+        /// <summary> Initializes a new instance of MapsTimeZoneClient. </summary>
+        protected MapsTimeZoneClient()
         {
+            _clientDiagnostics = null;
+            _pipeline = null;
+            restClient = null;
         }
 
-        /// <summary> Initializes a new instance of TimeZoneClient. </summary>
-        /// <param name="endpoint"> server parameter. </param>
-        /// <param name="clientId"> Specifies which account is intended for usage in conjunction with the Azure AD security model.  It represents a unique ID for the Azure Maps account and can be retrieved from the Azure Maps management  plane Account API. To use Azure AD security in Azure Maps see the following [articles](https://aka.ms/amauthdetails) for guidance. </param>
-        /// <param name="options"> The options for configuring the client. </param>
-        /// <exception cref="ArgumentNullException"> <paramref name="endpoint"/> is null. </exception>
-        public TimeZoneClient(Uri endpoint, string clientId, TimeZoneClientOptions options)
+        /// <summary> Initializes a new instance of MapsTimeZoneClient. </summary>
+        /// <param name="credential"> Shared key credential used to authenticate to an Azure Maps Render Service. </param>
+        public MapsTimeZoneClient(AzureKeyCredential credential)
         {
-            Argument.AssertNotNull(endpoint, nameof(endpoint));
-            options ??= new TimeZoneClientOptions();
+            Argument.AssertNotNull(credential, nameof(credential));
 
-            ClientDiagnostics = new ClientDiagnostics(options, true);
-            _pipeline = HttpPipelineBuilder.Build(options, Array.Empty<HttpPipelinePolicy>(), Array.Empty<HttpPipelinePolicy>(), new ResponseClassifier());
-            _endpoint = endpoint;
-            _clientId = clientId;
-            _apiVersion = options.Version;
+            var endpoint = new Uri("https://atlas.microsoft.com");
+            var options = new MapsTimeZoneClientOptions();
+            _clientDiagnostics = new ClientDiagnostics(options);
+            _pipeline = HttpPipelineBuilder.Build(options, new AzureKeyCredentialPolicy(credential, "subscription-key"));
+            restClient = new RenderRestClient(_clientDiagnostics, _pipeline, endpoint, null, options.Version);
+        }
+
+        /// <summary> Initializes a new instance of MapsTimeZoneClient. </summary>
+        /// <param name="credential"> Shared key credential used to authenticate to an Azure Maps Render Service. </param>
+        /// <param name="options"> The options for configuring the client. </param>
+        public MapsTimeZoneClient(AzureKeyCredential credential, MapsTimeZoneClientOptions options)
+        {
+            Argument.AssertNotNull(credential, nameof(credential));
+
+            var endpoint = options.Endpoint ?? new Uri("https://atlas.microsoft.com");
+            options ??= new MapsTimeZoneClientOptions();
+            _clientDiagnostics = new ClientDiagnostics(options);
+            _pipeline = HttpPipelineBuilder.Build(options, new AzureKeyCredentialPolicy(credential, "subscription-key"));
+            restClient = new RenderRestClient(_clientDiagnostics, _pipeline, endpoint, null, options.Version);
+        }
+
+        /// <summary> Initializes a new instance of MapsTimeZoneClient. </summary>
+        /// <param name="credential"> A credential used to authenticate to an Azure Maps Render Service. </param>
+        /// <param name="clientId"> Specifies which account is intended for usage in conjunction with the Azure AD security model.  It represents a unique ID for the Azure Maps account and can be retrieved from the Azure Maps management  plane Account API. To use Azure AD security in Azure Maps see the following <see href="https://aka.ms/amauthdetails">articles</see> for guidance. </param>
+        public MapsTimeZoneClient(TokenCredential credential, string clientId)
+        {
+            Argument.AssertNotNull(credential, nameof(credential));
+
+            var endpoint = new Uri("https://atlas.microsoft.com");
+            var options = new MapsTimeZoneClientOptions();
+            _clientDiagnostics = new ClientDiagnostics(options);
+            string[] scopes = { "https://atlas.microsoft.com/.default" };
+            _pipeline = HttpPipelineBuilder.Build(options, new BearerTokenAuthenticationPolicy(credential, scopes), new AzureKeyCredentialPolicy(new AzureKeyCredential(clientId), "x-ms-client-id"));
+            restClient = new RenderRestClient(_clientDiagnostics, _pipeline, endpoint, clientId, options.Version);
+        }
+
+        /// <summary> Initializes a new instance of MapsTimeZoneClient. </summary>
+        /// <param name="credential"> A credential used to authenticate to an Azure Maps Render Service. </param>
+        /// <param name="clientId"> Specifies which account is intended for usage in conjunction with the Azure AD security model.  It represents a unique ID for the Azure Maps account and can be retrieved from the Azure Maps management  plane Account API. To use Azure AD security in Azure Maps see the following <see href="https://aka.ms/amauthdetails">articles</see> for guidance. </param>
+        /// <param name="options"> The options for configuring the client. </param>
+        public MapsTimeZoneClient(TokenCredential credential, string clientId, MapsTimeZoneClientOptions options)
+        {
+            Argument.AssertNotNull(credential, nameof(credential));
+
+            var endpoint = options.Endpoint ?? new Uri("https://atlas.microsoft.com");
+            options ??= new MapsTimeZoneClientOptions();
+            _clientDiagnostics = new ClientDiagnostics(options);
+            string[] scopes = { "https://atlas.microsoft.com/.default" };
+            _pipeline = HttpPipelineBuilder.Build(options, new BearerTokenAuthenticationPolicy(credential, scopes), new AzureKeyCredentialPolicy(new AzureKeyCredential(clientId), "x-ms-client-id"));
+            restClient = new RenderRestClient(_clientDiagnostics, _pipeline, endpoint, clientId, options.Version);
+        }
+
+        /// <summary> Initializes a new instance of MapsTimeZoneClient. </summary>
+        /// <param name="clientDiagnostics"> The handler for diagnostic messaging in the client. </param>
+        /// <param name="pipeline"> The HTTP pipeline for sending and receiving REST requests and responses. </param>
+        /// <param name="endpoint"> server parameter. </param>
+        /// <param name="clientId"> Specifies which account is intended for usage in conjunction with the Azure AD security model.  It represents a unique ID for the Azure Maps account and can be retrieved from the Azure Maps management  plane Account API. To use Azure AD security in Azure Maps see the following <see href="https://aka.ms/amauthdetails">articles</see> for guidance. </param>
+        /// <param name="apiVersion"> Api Version. </param>
+        /// <exception cref="ArgumentNullException"> <paramref name="clientDiagnostics"/> or <paramref name="pipeline"/> is null. </exception>
+        internal MapsTimeZoneClient(ClientDiagnostics clientDiagnostics, HttpPipeline pipeline, Uri endpoint = null, string clientId = null, MapsTimeZoneClientOptions.ServiceVersion apiVersion = MapsTimeZoneClientOptions.LatestVersion)
+        {
+            var options = new MapsTimeZoneClientOptions(apiVersion);
+            restClient = new RenderRestClient(clientDiagnostics, pipeline, endpoint, clientId, options.Version);
+            _clientDiagnostics = clientDiagnostics;
+            _pipeline = pipeline;
         }
 
         /// <summary>
@@ -74,7 +130,7 @@ namespace Azure.Maps.TimeZone
         /// <example>
         /// This sample shows how to call GetTimeZoneByIDAsync with required parameters and parse the result.
         /// <code><![CDATA[
-        /// var client = new TimeZoneClient();
+        /// var client = new MapsTimeZoneClient();
         ///
         /// Response response = await client.GetTimeZoneByIDAsync("<timezoneId>");
         ///
@@ -83,7 +139,7 @@ namespace Azure.Maps.TimeZone
         /// ]]></code>
         /// This sample shows how to call GetTimeZoneByIDAsync with all parameters, and how to parse the result.
         /// <code><![CDATA[
-        /// var client = new TimeZoneClient();
+        /// var client = new MapsTimeZoneClient();
         ///
         /// Response response = await client.GetTimeZoneByIDAsync(<json>, "<timezoneId>", "<acceptLanguage>", "<options>", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, 1234);
         ///
@@ -176,7 +232,7 @@ namespace Azure.Maps.TimeZone
             Argument.AssertNotNullOrEmpty(format, nameof(format));
             Argument.AssertNotNull(timezoneId, nameof(timezoneId));
 
-            using var scope = ClientDiagnostics.CreateScope("TimeZoneClient.GetTimeZoneByID");
+            using var scope = ClientDiagnostics.CreateScope("MapsTimeZoneClient.GetTimeZoneByID");
             scope.Start();
             try
             {
@@ -213,7 +269,7 @@ namespace Azure.Maps.TimeZone
         /// <example>
         /// This sample shows how to call GetTimeZoneByID with required parameters and parse the result.
         /// <code><![CDATA[
-        /// var client = new TimeZoneClient();
+        /// var client = new MapsTimeZoneClient();
         ///
         /// Response response = client.GetTimeZoneByID("<timezoneId>");
         ///
@@ -222,7 +278,7 @@ namespace Azure.Maps.TimeZone
         /// ]]></code>
         /// This sample shows how to call GetTimeZoneByID with all parameters, and how to parse the result.
         /// <code><![CDATA[
-        /// var client = new TimeZoneClient();
+        /// var client = new MapsTimeZoneClient();
         ///
         /// Response response = client.GetTimeZoneByID(<json>, "<timezoneId>", "<acceptLanguage>", "<options>", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, 1234);
         ///
@@ -315,7 +371,7 @@ namespace Azure.Maps.TimeZone
             Argument.AssertNotNullOrEmpty(format, nameof(format));
             Argument.AssertNotNull(timezoneId, nameof(timezoneId));
 
-            using var scope = ClientDiagnostics.CreateScope("TimeZoneClient.GetTimeZoneByID");
+            using var scope = ClientDiagnostics.CreateScope("MapsTimeZoneClient.GetTimeZoneByID");
             scope.Start();
             try
             {
@@ -352,7 +408,7 @@ namespace Azure.Maps.TimeZone
         /// <example>
         /// This sample shows how to call GetTimeZoneByCoordinatesAsync with required parameters and parse the result.
         /// <code><![CDATA[
-        /// var client = new TimeZoneClient();
+        /// var client = new MapsTimeZoneClient();
         ///
         /// Response response = await client.GetTimeZoneByCoordinatesAsync(new Double[]{1234});
         ///
@@ -361,7 +417,7 @@ namespace Azure.Maps.TimeZone
         /// ]]></code>
         /// This sample shows how to call GetTimeZoneByCoordinatesAsync with all parameters, and how to parse the result.
         /// <code><![CDATA[
-        /// var client = new TimeZoneClient();
+        /// var client = new MapsTimeZoneClient();
         ///
         /// Response response = await client.GetTimeZoneByCoordinatesAsync(<json>, new Double[]{1234}, "<acceptLanguage>", "<options>", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, 1234);
         ///
@@ -454,7 +510,7 @@ namespace Azure.Maps.TimeZone
             Argument.AssertNotNullOrEmpty(format, nameof(format));
             Argument.AssertNotNull(coordinates, nameof(coordinates));
 
-            using var scope = ClientDiagnostics.CreateScope("TimeZoneClient.GetTimeZoneByCoordinates");
+            using var scope = ClientDiagnostics.CreateScope("MapsTimeZoneClient.GetTimeZoneByCoordinates");
             scope.Start();
             try
             {
@@ -491,7 +547,7 @@ namespace Azure.Maps.TimeZone
         /// <example>
         /// This sample shows how to call GetTimeZoneByCoordinates with required parameters and parse the result.
         /// <code><![CDATA[
-        /// var client = new TimeZoneClient();
+        /// var client = new MapsTimeZoneClient();
         ///
         /// Response response = client.GetTimeZoneByCoordinates(new Double[]{1234});
         ///
@@ -500,7 +556,7 @@ namespace Azure.Maps.TimeZone
         /// ]]></code>
         /// This sample shows how to call GetTimeZoneByCoordinates with all parameters, and how to parse the result.
         /// <code><![CDATA[
-        /// var client = new TimeZoneClient();
+        /// var client = new MapsTimeZoneClient();
         ///
         /// Response response = client.GetTimeZoneByCoordinates(<json>, new Double[]{1234}, "<acceptLanguage>", "<options>", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, 1234);
         ///
@@ -593,7 +649,7 @@ namespace Azure.Maps.TimeZone
             Argument.AssertNotNullOrEmpty(format, nameof(format));
             Argument.AssertNotNull(coordinates, nameof(coordinates));
 
-            using var scope = ClientDiagnostics.CreateScope("TimeZoneClient.GetTimeZoneByCoordinates");
+            using var scope = ClientDiagnostics.CreateScope("MapsTimeZoneClient.GetTimeZoneByCoordinates");
             scope.Start();
             try
             {
@@ -625,7 +681,7 @@ namespace Azure.Maps.TimeZone
         /// <example>
         /// This sample shows how to call GetWindowsTimeZoneIdsAsync and parse the result.
         /// <code><![CDATA[
-        /// var client = new TimeZoneClient();
+        /// var client = new MapsTimeZoneClient();
         ///
         /// Response response = await client.GetWindowsTimeZoneIdsAsync();
         ///
@@ -634,7 +690,7 @@ namespace Azure.Maps.TimeZone
         /// ]]></code>
         /// This sample shows how to call GetWindowsTimeZoneIdsAsync with all parameters, and how to parse the result.
         /// <code><![CDATA[
-        /// var client = new TimeZoneClient();
+        /// var client = new MapsTimeZoneClient();
         ///
         /// Response response = await client.GetWindowsTimeZoneIdsAsync(<json>);
         ///
@@ -662,7 +718,7 @@ namespace Azure.Maps.TimeZone
         {
             Argument.AssertNotNullOrEmpty(format, nameof(format));
 
-            using var scope = ClientDiagnostics.CreateScope("TimeZoneClient.GetWindowsTimeZoneIds");
+            using var scope = ClientDiagnostics.CreateScope("MapsTimeZoneClient.GetWindowsTimeZoneIds");
             scope.Start();
             try
             {
@@ -694,7 +750,7 @@ namespace Azure.Maps.TimeZone
         /// <example>
         /// This sample shows how to call GetWindowsTimeZoneIds and parse the result.
         /// <code><![CDATA[
-        /// var client = new TimeZoneClient();
+        /// var client = new MapsTimeZoneClient();
         ///
         /// Response response = client.GetWindowsTimeZoneIds();
         ///
@@ -703,7 +759,7 @@ namespace Azure.Maps.TimeZone
         /// ]]></code>
         /// This sample shows how to call GetWindowsTimeZoneIds with all parameters, and how to parse the result.
         /// <code><![CDATA[
-        /// var client = new TimeZoneClient();
+        /// var client = new MapsTimeZoneClient();
         ///
         /// Response response = client.GetWindowsTimeZoneIds(<json>);
         ///
@@ -731,7 +787,7 @@ namespace Azure.Maps.TimeZone
         {
             Argument.AssertNotNullOrEmpty(format, nameof(format));
 
-            using var scope = ClientDiagnostics.CreateScope("TimeZoneClient.GetWindowsTimeZoneIds");
+            using var scope = ClientDiagnostics.CreateScope("MapsTimeZoneClient.GetWindowsTimeZoneIds");
             scope.Start();
             try
             {
@@ -763,7 +819,7 @@ namespace Azure.Maps.TimeZone
         /// <example>
         /// This sample shows how to call GetIanaTimeZoneIdsAsync and parse the result.
         /// <code><![CDATA[
-        /// var client = new TimeZoneClient();
+        /// var client = new MapsTimeZoneClient();
         ///
         /// Response response = await client.GetIanaTimeZoneIdsAsync();
         ///
@@ -772,7 +828,7 @@ namespace Azure.Maps.TimeZone
         /// ]]></code>
         /// This sample shows how to call GetIanaTimeZoneIdsAsync with all parameters, and how to parse the result.
         /// <code><![CDATA[
-        /// var client = new TimeZoneClient();
+        /// var client = new MapsTimeZoneClient();
         ///
         /// Response response = await client.GetIanaTimeZoneIdsAsync(<json>);
         ///
@@ -802,7 +858,7 @@ namespace Azure.Maps.TimeZone
         {
             Argument.AssertNotNullOrEmpty(format, nameof(format));
 
-            using var scope = ClientDiagnostics.CreateScope("TimeZoneClient.GetIanaTimeZoneIds");
+            using var scope = ClientDiagnostics.CreateScope("MapsTimeZoneClient.GetIanaTimeZoneIds");
             scope.Start();
             try
             {
@@ -834,7 +890,7 @@ namespace Azure.Maps.TimeZone
         /// <example>
         /// This sample shows how to call GetIanaTimeZoneIds and parse the result.
         /// <code><![CDATA[
-        /// var client = new TimeZoneClient();
+        /// var client = new MapsTimeZoneClient();
         ///
         /// Response response = client.GetIanaTimeZoneIds();
         ///
@@ -843,7 +899,7 @@ namespace Azure.Maps.TimeZone
         /// ]]></code>
         /// This sample shows how to call GetIanaTimeZoneIds with all parameters, and how to parse the result.
         /// <code><![CDATA[
-        /// var client = new TimeZoneClient();
+        /// var client = new MapsTimeZoneClient();
         ///
         /// Response response = client.GetIanaTimeZoneIds(<json>);
         ///
@@ -873,7 +929,7 @@ namespace Azure.Maps.TimeZone
         {
             Argument.AssertNotNullOrEmpty(format, nameof(format));
 
-            using var scope = ClientDiagnostics.CreateScope("TimeZoneClient.GetIanaTimeZoneIds");
+            using var scope = ClientDiagnostics.CreateScope("MapsTimeZoneClient.GetIanaTimeZoneIds");
             scope.Start();
             try
             {
@@ -905,7 +961,7 @@ namespace Azure.Maps.TimeZone
         /// <example>
         /// This sample shows how to call GetIanaVersionAsync and parse the result.
         /// <code><![CDATA[
-        /// var client = new TimeZoneClient();
+        /// var client = new MapsTimeZoneClient();
         ///
         /// Response response = await client.GetIanaVersionAsync();
         ///
@@ -914,7 +970,7 @@ namespace Azure.Maps.TimeZone
         /// ]]></code>
         /// This sample shows how to call GetIanaVersionAsync with all parameters, and how to parse the result.
         /// <code><![CDATA[
-        /// var client = new TimeZoneClient();
+        /// var client = new MapsTimeZoneClient();
         ///
         /// Response response = await client.GetIanaVersionAsync(<json>);
         ///
@@ -938,7 +994,7 @@ namespace Azure.Maps.TimeZone
         {
             Argument.AssertNotNullOrEmpty(format, nameof(format));
 
-            using var scope = ClientDiagnostics.CreateScope("TimeZoneClient.GetIanaVersion");
+            using var scope = ClientDiagnostics.CreateScope("MapsTimeZoneClient.GetIanaVersion");
             scope.Start();
             try
             {
@@ -970,7 +1026,7 @@ namespace Azure.Maps.TimeZone
         /// <example>
         /// This sample shows how to call GetIanaVersion and parse the result.
         /// <code><![CDATA[
-        /// var client = new TimeZoneClient();
+        /// var client = new MapsTimeZoneClient();
         ///
         /// Response response = client.GetIanaVersion();
         ///
@@ -979,7 +1035,7 @@ namespace Azure.Maps.TimeZone
         /// ]]></code>
         /// This sample shows how to call GetIanaVersion with all parameters, and how to parse the result.
         /// <code><![CDATA[
-        /// var client = new TimeZoneClient();
+        /// var client = new MapsTimeZoneClient();
         ///
         /// Response response = client.GetIanaVersion(<json>);
         ///
@@ -1003,7 +1059,7 @@ namespace Azure.Maps.TimeZone
         {
             Argument.AssertNotNullOrEmpty(format, nameof(format));
 
-            using var scope = ClientDiagnostics.CreateScope("TimeZoneClient.GetIanaVersion");
+            using var scope = ClientDiagnostics.CreateScope("MapsTimeZoneClient.GetIanaVersion");
             scope.Start();
             try
             {
@@ -1037,7 +1093,7 @@ namespace Azure.Maps.TimeZone
         /// <example>
         /// This sample shows how to call ConvertWindowsTimeZoneToIanaAsync with required parameters and parse the result.
         /// <code><![CDATA[
-        /// var client = new TimeZoneClient();
+        /// var client = new MapsTimeZoneClient();
         ///
         /// Response response = await client.ConvertWindowsTimeZoneToIanaAsync("<windowsTimeZoneId>");
         ///
@@ -1046,7 +1102,7 @@ namespace Azure.Maps.TimeZone
         /// ]]></code>
         /// This sample shows how to call ConvertWindowsTimeZoneToIanaAsync with all parameters, and how to parse the result.
         /// <code><![CDATA[
-        /// var client = new TimeZoneClient();
+        /// var client = new MapsTimeZoneClient();
         ///
         /// Response response = await client.ConvertWindowsTimeZoneToIanaAsync(<json>, "<windowsTimeZoneId>", "<windowsTerritoryCode>");
         ///
@@ -1077,7 +1133,7 @@ namespace Azure.Maps.TimeZone
             Argument.AssertNotNullOrEmpty(format, nameof(format));
             Argument.AssertNotNull(windowsTimeZoneId, nameof(windowsTimeZoneId));
 
-            using var scope = ClientDiagnostics.CreateScope("TimeZoneClient.ConvertWindowsTimeZoneToIana");
+            using var scope = ClientDiagnostics.CreateScope("MapsTimeZoneClient.ConvertWindowsTimeZoneToIana");
             scope.Start();
             try
             {
@@ -1111,7 +1167,7 @@ namespace Azure.Maps.TimeZone
         /// <example>
         /// This sample shows how to call ConvertWindowsTimeZoneToIana with required parameters and parse the result.
         /// <code><![CDATA[
-        /// var client = new TimeZoneClient();
+        /// var client = new MapsTimeZoneClient();
         ///
         /// Response response = client.ConvertWindowsTimeZoneToIana("<windowsTimeZoneId>");
         ///
@@ -1120,7 +1176,7 @@ namespace Azure.Maps.TimeZone
         /// ]]></code>
         /// This sample shows how to call ConvertWindowsTimeZoneToIana with all parameters, and how to parse the result.
         /// <code><![CDATA[
-        /// var client = new TimeZoneClient();
+        /// var client = new MapsTimeZoneClient();
         ///
         /// Response response = client.ConvertWindowsTimeZoneToIana(<json>, "<windowsTimeZoneId>", "<windowsTerritoryCode>");
         ///
@@ -1151,7 +1207,7 @@ namespace Azure.Maps.TimeZone
             Argument.AssertNotNullOrEmpty(format, nameof(format));
             Argument.AssertNotNull(windowsTimeZoneId, nameof(windowsTimeZoneId));
 
-            using var scope = ClientDiagnostics.CreateScope("TimeZoneClient.ConvertWindowsTimeZoneToIana");
+            using var scope = ClientDiagnostics.CreateScope("MapsTimeZoneClient.ConvertWindowsTimeZoneToIana");
             scope.Start();
             try
             {
